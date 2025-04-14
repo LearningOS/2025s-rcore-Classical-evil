@@ -21,6 +21,10 @@ const SYSCALL_GET_TIME: usize = 169;
 /// trace syscall
 const SYSCALL_TRACE: usize = 410;
 
+const SYSCALL_COUNT: usize = 1000;
+
+static mut TRACE: [[isize; SYSCALL_COUNT]; SYSCALL_COUNT] = [[0; SYSCALL_COUNT]; SYSCALL_COUNT];
+
 mod fs;
 mod process;
 
@@ -29,6 +33,13 @@ use process::*;
 
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+    use crate::task::TASK_MANAGER;
+
+    unsafe{TRACE[TASK_MANAGER.get_current_task()][syscall_id] += 1;
+            /*if syscall_id == SYSCALL_WRITE {
+                println!("TRACE[SYSCALL_WRITE]:{}", TRACE[syscall_id])
+            }*/
+    }
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
