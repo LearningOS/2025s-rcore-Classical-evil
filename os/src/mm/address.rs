@@ -96,6 +96,7 @@ impl From<VirtPageNum> for usize {
 impl VirtAddr {
     /// Get the (floor) virtual page number
     pub fn floor(&self) -> VirtPageNum {
+        // println!("vir:{}", self.0 / PAGE_SIZE);
         VirtPageNum(self.0 / PAGE_SIZE)
     }
 
@@ -116,6 +117,7 @@ impl VirtAddr {
 }
 impl From<VirtAddr> for VirtPageNum {
     fn from(v: VirtAddr) -> Self {
+        // println!("vir:{}", v.0);
         assert_eq!(v.page_offset(), 0);
         v.floor()
     }

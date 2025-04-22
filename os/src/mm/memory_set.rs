@@ -285,14 +285,51 @@ impl MemorySet {
     ///
     #[allow(unused)]
     pub fn mmap(&mut self, start: VirtAddr) -> bool{
-        // println!("start:{}", start.0);
+        // println!("mmpstart:{}", start.0);
         if let Some(area) = self
         .areas
         .iter_mut()
         .find(|area| area.contains(start.into()))
     {
         true
-        
+    } else {
+        false
+    }
+    }
+
+    ///
+    pub fn read(&mut self, start: VirtAddr) -> bool{
+        // println!("mmpstart:{}", start.0);
+        if let Some(area) = self
+        .areas
+        .iter_mut()
+        .find(|area| area.contains(start.into()))
+    {
+        if (area.map_perm & MapPermission::R) != (MapPermission{bits: 0}) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    } else {
+        false
+    }
+    }
+
+    ///
+    pub fn write(&mut self, start: VirtAddr) -> bool{
+        // println!("mmpstart:{}", start.0);
+        if let Some(area) = self
+        .areas
+        .iter_mut()
+        .find(|area| area.contains(start.into()))
+    {
+        if (area.map_perm & MapPermission::W) != (MapPermission{bits: 0}) {
+            return true;
+        }
+        else {
+            return false;
+        }
     } else {
         false
     }
@@ -350,6 +387,7 @@ impl MapArea {
     ///
     pub fn map(&mut self, page_table: &mut PageTable) {
         for vpn in self.vpn_range {
+            // println!("vvvpn:{}", vpn.0);
             self.map_one(page_table, vpn);
         }
     }

@@ -164,15 +164,12 @@ impl TaskManager {
 
 
         if start % 4096 != 0 {
-            // println!("1:");
             return -1;
         }
         if port & !0x7 != 0 {
-            // println!("2:");
             return -1;
         }
         if port & 0x7 == 0 {
-            // println!("3:");
             return -1;
         }
 
@@ -186,20 +183,11 @@ impl TaskManager {
             // use crate::mm::VirtPageNum;
             match inner.tasks[cur].memory_set.mmap(i.into()) {
                true => {
-                println!("mmap, i:{}", i);
+                // println!("mmap, i:{}", i);
                 return -1;},
                false => {},
             }
             i += 4096;
-            // if length >= 4096 {
-            //     length -= 4096;
-            // }
-            // else if length > 0 {
-            //     length = 0;
-            // }
-            // else {
-            //     break;
-            // }
             if i >= start + len {
                 break;
             }
@@ -256,6 +244,25 @@ impl TaskManager {
         return 0;
     }
 
+    ///
+    pub fn get_current_task(&self) -> usize{
+        let inner = self.inner.exclusive_access();
+        inner.current_task
+    }
+
+    ///
+    pub fn read(&self, start: usize) -> bool {
+        let mut inner = self.inner.exclusive_access();
+        let cur = inner.current_task;
+        inner.tasks[cur].memory_set.read(start.into())
+    } 
+
+    ///
+    pub fn write(&self, start: usize) -> bool {
+        let mut inner = self.inner.exclusive_access();
+        let cur = inner.current_task;
+        inner.tasks[cur].memory_set.write(start.into())
+    } 
 }
 
 /// Run the first task in task list.

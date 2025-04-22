@@ -25,55 +25,81 @@ pub fn sys_yield() -> isize {
 /// YOUR JOB: get time with second and microsecond
 /// HINT: You might reimplement it with virtual memory management.
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
-pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
+pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    -1
+    use crate::mm::translated_byte_buffer;
+    use crate::task::current_user_token;
+
+    use crate::timer::get_time_us;
+    let us = get_time_us();
+    let mut buffers = translated_byte_buffer(current_user_token(), ts as *const u8, 16);
+    let sec = us / 1_000_000;
+    let usec =  us % 1_000_000;
+
+    buffers[0][0] = sec as u8;
+    buffers[0][1] = (sec >> 8) as u8;
+    buffers[0][2] = (sec >> 16) as u8;
+    buffers[0][3] = (sec >> 24) as u8;
+    buffers[0][4] = (sec >> 32) as u8;
+    buffers[0][5] = (sec >> 40) as u8;
+    buffers[0][6] = (sec >> 48) as u8;
+    buffers[0][7] = (sec >> 56) as u8;
+
+    buffers[0][8] = usec as u8;
+    buffers[0][9] = (usec >> 8) as u8;
+    buffers[0][10] = (usec >> 16) as u8;
+    buffers[0][11] = (usec >> 24) as u8;
+    buffers[0][12] = (usec >> 32) as u8;
+    buffers[0][13] = (usec >> 40) as u8;
+    buffers[0][14] = (usec >> 48) as u8;
+    buffers[0][15] = (usec >> 56) as u8;
+
+    //                 buffers[0][0].into()
+    // unsafe {
+    //     *ts = TimeVal {
+    //         sec: us / 1_000_000,
+    //         usec: us % 1_000_000,
+    //     };
+    // }
+    0
 }
 
 /// TODO: Finish sys_trace to pass testcases
 /// HINT: You might reimplement it with virtual memory management.
-pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
-    trace!("kernel: sys_trace");
-    -1
+#[allow(unused)]
+pub fn sys_trace(trace_request: usize, id: usize, data: usize) -> isize {
+    use super::TRACE;
+     use crate::task::TASK_MANAGER;
+     match trace_request {
+         0 => {
+                if TASK_MANAGER.read((id >> 12) << 12) {
+                    use crate::task::current_user_token;
+                    use crate::mm::translated_byte_buffer;
+                    let buffers = translated_byte_buffer(current_user_token(), id as *const u8, 1);
+                    buffers[0][0].into()
+                }
+                else {-1}                
+         }
+         1 => {
+            if TASK_MANAGER.write((id >> 12) << 12) {
+                use crate::task::current_user_token;
+                use crate::mm::translated_byte_buffer;
+                let mut buffers = translated_byte_buffer(current_user_token(), id as *const u8, 1);
+                buffers[0][0] = data as u8;
+                0
+            }
+            else {-1}  
+             
+         }
+         2 => {
+             unsafe{TRACE[TASK_MANAGER.get_current_task()][id]}
+         }
+         _ => -1
+     }
 }
 
 // YOUR JOB: Implement mmap.
 pub fn sys_mmap(start: usize, len: usize, port: usize) -> isize {
-    // use crate::mm::{
-    //     MapPermission, MapType, MapArea,
-    // };
-    // if start % 4096 != 0 {
-    //     return -1;
-    // }
-    // if port & !0x7 != 0 {
-    //     return -1;
-    // }
-    // if port & 0x7 == 0 {
-    //     return -1;
-    // }
-    // let mut i = start;
-    // loop {
-    //     if i > start + len {
-    //         break;
-    //     }
-    //     if let Some(_x) = KERNEL_SPACE.exclusive_access().page_table.find_pte(i) {
-    //         return -1;
-    //     }
-    //     i += 4096;
-
-    // }
-    // let mut inner = TASK_MANAGER.inner.exclusive_access();
-    // TASK_MANAGER.get_current_taskblock().memory_set.push(MapArea::new(
-    //                                 start.into(), 
-    //                                 ((start + len + 4096 - 1) / 4096).into(), 
-    //                                 MapType::Framed, MapPermission::from_bits(port as u8).unwrap())
-    //                                 , None);
-
-    // TASK_MANAGER.get_current_taskblock().memory_set.insert_framed_area(
-    //                                 start.into(), 
-    //                                 ((start + len + 4096 - 1) / 4096).into(), 
-    //                                 MapType::Framed, MapPermission::from_bits(port as u8).unwrap());
-  
     use crate::task::TASK_MANAGER;
     TASK_MANAGER.mmap(start, len, port)
     
