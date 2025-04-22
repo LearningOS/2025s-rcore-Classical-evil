@@ -153,6 +153,109 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+
+    ///xxxx
+    /// 
+    #[allow(unused)]
+    pub fn mmap(&self, start: usize, len: usize, port: usize) -> isize{
+        use crate::mm::{
+            MapPermission
+        };
+
+
+        if start % 4096 != 0 {
+            // println!("1:");
+            return -1;
+        }
+        if port & !0x7 != 0 {
+            // println!("2:");
+            return -1;
+        }
+        if port & 0x7 == 0 {
+            // println!("3:");
+            return -1;
+        }
+
+
+        let mut inner = self.inner.exclusive_access();
+        let cur = inner.current_task;
+
+        let mut i = start;
+        // let mut length = len;
+        loop {
+            // use crate::mm::VirtPageNum;
+            match inner.tasks[cur].memory_set.mmap(i.into()) {
+               true => {
+                println!("mmap, i:{}", i);
+                return -1;},
+               false => {},
+            }
+            i += 4096;
+            // if length >= 4096 {
+            //     length -= 4096;
+            // }
+            // else if length > 0 {
+            //     length = 0;
+            // }
+            // else {
+            //     break;
+            // }
+            if i >= start + len {
+                break;
+            }
+    
+        }
+        let per = match port {
+            1 => MapPermission::R,
+            2 => MapPermission::W,
+            3 => MapPermission::R | MapPermission::W,
+            4 => MapPermission::X ,
+            5 => MapPermission::R | MapPermission::X,
+            6 => MapPermission::X | MapPermission::W,
+            7 => MapPermission::R | MapPermission::W | MapPermission::X,
+            _ => panic!("port"),
+        };
+        
+        // println!("s:{}, end:{}", start, (start + ((len + 4096 - 1) / 4096)));
+        inner.tasks[cur].memory_set.insert_framed_area(
+            start.into(), 
+            (start + len).into(), 
+            per | MapPermission::U);
+        
+        return 0;
+    }
+
+    ///
+    #[allow(unused)]
+    pub fn munmap(&self, start: usize, len: usize) -> isize{
+        if start % 4096 != 0 {
+            // println!("1:");
+            return -1;
+        }
+
+        let mut inner = self.inner.exclusive_access();
+        let cur = inner.current_task;
+
+        let mut i = start;
+        loop {
+            // use crate::mm::VirtPageNum;
+            match inner.tasks[cur].memory_set.munmap(i.into()) {
+               true => {
+                // inner.tasks[cur].memory_set.munmap(start.into())
+               },
+               false => {return -1;}
+            }
+            i += 4096;
+            
+            if i >= start + len {
+                break;
+            }
+    
+        }
+        
+        return 0;
+    }
+
 }
 
 /// Run the first task in task list.

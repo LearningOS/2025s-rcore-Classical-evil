@@ -38,15 +38,51 @@ pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
 }
 
 // YOUR JOB: Implement mmap.
-pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
-    trace!("kernel: sys_mmap NOT IMPLEMENTED YET!");
-    -1
+pub fn sys_mmap(start: usize, len: usize, port: usize) -> isize {
+    // use crate::mm::{
+    //     MapPermission, MapType, MapArea,
+    // };
+    // if start % 4096 != 0 {
+    //     return -1;
+    // }
+    // if port & !0x7 != 0 {
+    //     return -1;
+    // }
+    // if port & 0x7 == 0 {
+    //     return -1;
+    // }
+    // let mut i = start;
+    // loop {
+    //     if i > start + len {
+    //         break;
+    //     }
+    //     if let Some(_x) = KERNEL_SPACE.exclusive_access().page_table.find_pte(i) {
+    //         return -1;
+    //     }
+    //     i += 4096;
+
+    // }
+    // let mut inner = TASK_MANAGER.inner.exclusive_access();
+    // TASK_MANAGER.get_current_taskblock().memory_set.push(MapArea::new(
+    //                                 start.into(), 
+    //                                 ((start + len + 4096 - 1) / 4096).into(), 
+    //                                 MapType::Framed, MapPermission::from_bits(port as u8).unwrap())
+    //                                 , None);
+
+    // TASK_MANAGER.get_current_taskblock().memory_set.insert_framed_area(
+    //                                 start.into(), 
+    //                                 ((start + len + 4096 - 1) / 4096).into(), 
+    //                                 MapType::Framed, MapPermission::from_bits(port as u8).unwrap());
+  
+    use crate::task::TASK_MANAGER;
+    TASK_MANAGER.mmap(start, len, port)
+    
 }
 
 // YOUR JOB: Implement munmap.
-pub fn sys_munmap(_start: usize, _len: usize) -> isize {
-    trace!("kernel: sys_munmap NOT IMPLEMENTED YET!");
-    -1
+pub fn sys_munmap(start: usize, len: usize) -> isize {
+    use crate::task::TASK_MANAGER;
+    TASK_MANAGER.munmap(start, len)
 }
 /// change data segment size
 pub fn sys_sbrk(size: i32) -> isize {
@@ -57,3 +93,5 @@ pub fn sys_sbrk(size: i32) -> isize {
         -1
     }
 }
+
+
