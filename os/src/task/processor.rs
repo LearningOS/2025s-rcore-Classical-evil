@@ -5,7 +5,7 @@
 //! and the replacement and transfer of control flow of different applications are executed.
 
 use super::__switch;
-use super::{fetch_task, TaskStatus};
+use super::{TaskStatus};
 use super::{TaskContext, TaskControlBlock};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
@@ -50,16 +50,27 @@ lazy_static! {
     pub static ref PROCESSOR: UPSafeCell<Processor> = unsafe { UPSafeCell::new(Processor::new()) };
 }
 
+
 ///The main part of process execution and scheduling
 ///Loop `fetch_task` to get the process that needs to run, and switch the process through `__switch`
 pub fn run_tasks() {
     loop {
+        use crate::task::manager::stride;
+
         let mut processor = PROCESSOR.exclusive_access();
-        if let Some(task) = fetch_task() {
+        if let Some(task) = stride() {
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+
+            
             // access coming task TCB exclusively
             let mut task_inner = task.inner_exclusive_access();
             let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
+            
+            // println!("start:{}", task_inner.stride);
+            let pass = (255 / task_inner.prio) as usize;
+            task_inner.stride += pass;
+            // println!("end:{}", task_inner.stride);
+
             task_inner.task_status = TaskStatus::Running;
             // release coming task_inner manually
             drop(task_inner);
@@ -69,7 +80,15 @@ pub fn run_tasks() {
             drop(processor);
             unsafe {
                 __switch(idle_task_cx_ptr, next_task_cx_ptr);
-            }
+            }      
+
+
+            // let task = current_task().unwrap();
+            // // ---- access current TCB exclusively
+            // let mut task_inner = task.inner_exclusive_access();
+            // let pass = (255 / task_inner.prio) as usize;
+            // task_inner.stride += pass;
+
         } else {
             warn!("no tasks available in run_tasks");
         }
@@ -109,3 +128,4 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
 }
+

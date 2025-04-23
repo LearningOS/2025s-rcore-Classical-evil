@@ -300,6 +300,42 @@ impl MemorySet {
             false
         }
     }
+
+    ///xxx
+    #[allow(unused)]
+    pub fn mmap(&mut self, start: VirtAddr) -> bool{
+        // println!("start:{}", start.0);
+        // println!("mmpstart:{}", start.0);
+        if let Some(area) = self
+        .areas
+        .iter_mut()
+        .find(|area| area.contains(start.into()))
+        {
+            true
+            
+        } else {
+            false
+        }
+    }
+
+    ///xxx
+    #[allow(unused)]
+    pub fn munmap(&mut self, start: VirtAddr) -> bool {
+        if let Some(area) = self
+        .areas
+        .iter_mut()
+        .find(|area| area.contains(start.into()))
+    {
+        area.unmap_one(&mut self.page_table, start.floor());
+        // println!("T vir:{}, munmap success", start.0);
+        true
+
+    } else {
+        // println!("F vir:{}, munmap error", start.0);
+        false
+    }
+    }
+
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {
@@ -399,6 +435,13 @@ impl MapArea {
             }
             current_vpn.step();
         }
+    }
+
+    ///
+    ///xxx
+    pub fn contains(&self, vpn: VirtPageNum) -> bool {
+        // println!("vpn:{}", vpn.0);
+        self.data_frames.contains_key(&vpn)
     }
 }
 
