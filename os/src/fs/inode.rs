@@ -53,6 +53,19 @@ impl OSInode {
         }
         v
     }
+
+    ///xxxx
+    #[allow(unused)]
+    pub fn get_inode_id(&self) -> u32 {
+        let inner = self.inner.exclusive_access();
+        let mut x = inner.inode.get_inode_id();
+
+        let y = x & !(1 << 12);
+        let z = count(y);
+        x |= (z << 20);
+        // println!("y:{}, count:{}, inode_id:{}", y ,z, x);
+        x
+    }
 }
 
 lazy_static! {
@@ -125,6 +138,50 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     }
 }
 
+///xxxx
+pub fn find_inode_id(name: &str) -> u32 {
+    ROOT_INODE.get(name).unwrap()
+}
+
+///xxxx
+pub fn get_some(name: &str){
+    let (block_id,
+        inodes_per_block,
+        inode_area_start_block) = ROOT_INODE.get_some(name);
+    println!("1:{}, 2:{}, 3:{}", block_id, inodes_per_block, inode_area_start_block);
+}
+
+///xxxx
+#[allow(unused)]
+pub fn linkat(old: &str, new: &str) -> isize {
+    
+
+    let x = ROOT_INODE.linkat(old, new);
+    // let o = find_inode_id(old);
+    //  println!("old:{}", o);
+
+    // let n = find_inode_id(new);
+    // println!("new:{}", n);
+    x
+}
+
+///xxxx
+#[allow(unused)]
+pub fn unlinkat(name: &str) -> isize {
+    ROOT_INODE.unlinkat(name) 
+}
+
+// ///
+// fn fstat() {
+
+// }
+
+///
+#[allow(unused)]
+fn count(id: u32) -> u32 {
+    ROOT_INODE.count_link(id)
+}
+
 impl File for OSInode {
     fn readable(&self) -> bool {
         self.readable
@@ -155,5 +212,8 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
+    }
+    fn get_inode_id(&self) -> u32{
+        self.get_inode_id()
     }
 }

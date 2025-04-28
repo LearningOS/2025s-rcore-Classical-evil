@@ -58,6 +58,8 @@ impl Inode {
         }
         None
     }
+
+    
     /// Find inode under current inode by name
     pub fn find(&self, name: &str) -> Option<Arc<Inode>> {
         let fs = self.fs.lock();
@@ -90,6 +92,83 @@ impl Inode {
         }
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
+
+    ///xxx
+    pub fn linkat(&self, old: &str, new: &str) -> isize {
+
+        if let Some(inode) = self.find(old) {
+            // println!("odlld");
+            let mut fs = self.fs.lock();
+            let inode_id = self.read_disk_inode(|disk_inode| {
+                    self.find_inode_id(old, disk_inode)});
+
+            self.modify_disk_inode(|root_inode| {
+                
+            
+                // append file in the dirent
+                let file_count = (root_inode.size as usize) / DIRENT_SZ;
+                let new_size = (file_count + 1) * DIRENT_SZ;
+                // increase size
+                self.increase_size(new_size as u32, root_inode, &mut fs);
+                // write dirent
+                let dirent = DirEntry::new(new, inode_id.unwrap());
+                root_inode.write_at(
+                    file_count * DIRENT_SZ,
+                    dirent.as_bytes(),
+                    &self.block_device,
+                );
+                
+            });
+            0
+        }
+        else {
+            -1
+        }
+    }
+
+
+    ///xxxx
+     fn unlink(&self, disk_inode: &DiskInode, name: &str) -> usize{
+        let mut sum = 0;
+
+        assert!(disk_inode.is_dir());
+        let file_count = (disk_inode.size as usize) / DIRENT_SZ;
+        let mut dirent = DirEntry::empty();
+        for i in 0..file_count {
+            assert_eq!(
+                disk_inode.read_at(DIRENT_SZ * i, dirent.as_bytes_mut(), &self.block_device,),
+                DIRENT_SZ,
+            );
+            if dirent.name() == name {
+                return i;
+            }
+        }
+        0
+    }
+
+
+    ///xxxx
+    pub fn unlinkat(&self, name: &str) -> isize {
+
+        if let Some(_inode) = self.find(name) {
+            let index = self.read_disk_inode(|disk_inode| {
+                self.unlink(disk_inode, name) });
+                self.modify_disk_inode(|root_inode| {
+                                let dirent = DirEntry::new("", 0xfff);
+                                root_inode.write_at(
+                                    index as usize * DIRENT_SZ,
+                                    dirent.as_bytes(),
+                                    &self.block_device,
+                                );
+                            });
+            0
+        }
+        else {
+            -1
+        }
+    }
+
+
     /// Create inode under current inode by name
     pub fn create(&self, name: &str) -> Option<Arc<Inode>> {
         let mut fs = self.fs.lock();
@@ -183,4 +262,58 @@ impl Inode {
         });
         block_cache_sync_all();
     }
+
+    ///xxxx
+    pub fn get_inode_id(&self) -> u32 {
+        let fs = self.fs.lock();
+        let file = self.read_disk_inode(|disk_inode| disk_inode.is_dir());
+        let mut result = fs.get_inode_id(self.block_id as u32, self.block_offset as u32);
+        if file == false {
+            result |= (1 << 12)
+        };
+        result
+        
+    }
+    
+    ///xxxx
+    fn count(&self, disk_inode: &DiskInode, id: u32) -> u32 {
+        let mut sum = 0;
+
+        assert!(disk_inode.is_dir());
+        let file_count = (disk_inode.size as usize) / DIRENT_SZ;
+        let mut dirent = DirEntry::empty();
+        for i in 0..file_count {
+            assert_eq!(
+                disk_inode.read_at(DIRENT_SZ * i, dirent.as_bytes_mut(), &self.block_device,),
+                DIRENT_SZ,
+            );
+            if dirent.inode_id() == id {
+                sum += 1;
+            }
+        }
+        sum as u32
+    }
+
+
+    ///xxxx
+    pub fn count_link(&self, id: u32) -> u32 {
+        self.read_disk_inode(|disk_inode| {
+            self.count(disk_inode, id) })
+    }
+
+    ///xxxx
+    pub fn get(&self, name: &str) -> Option<u32> {
+        let fs = self.fs.lock();
+        self.read_disk_inode(|disk_inode| {
+            self.find_inode_id(name, disk_inode)} )
+    }
+
+    ///xxxx
+    pub fn get_some(&self, name: &str) -> (u32, u32, u32) {
+        
+        let x = self.get(name).unwrap();
+        let fs = self.fs.lock();
+        fs.get_some(x)
+    }
+    
 }
