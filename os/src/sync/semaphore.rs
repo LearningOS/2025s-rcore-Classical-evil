@@ -1,8 +1,12 @@
 //! Semaphore
+//! 
 
 use crate::sync::UPSafeCell;
-use crate::task::{block_current_and_run_next, current_task, wakeup_task, TaskControlBlock};
+#[allow(unused)]
+use crate::task::{block_current_and_run_next, current_task, wakeup_task, TaskControlBlock, current_process};
 use alloc::{collections::VecDeque, sync::Arc};
+#[allow(unused)]
+use alloc::vec::Vec;
 
 /// semaphore structure
 pub struct Semaphore {
@@ -19,6 +23,7 @@ impl Semaphore {
     /// Create a new semaphore
     pub fn new(res_count: usize) -> Self {
         trace!("kernel: Semaphore::new");
+
         Self {
             inner: unsafe {
                 UPSafeCell::new(SemaphoreInner {
@@ -30,6 +35,7 @@ impl Semaphore {
     }
 
     /// up operation of semaphore
+    #[allow(unused)]
     pub fn up(&self) {
         trace!("kernel: Semaphore::up");
         let mut inner = self.inner.exclusive_access();
@@ -41,6 +47,7 @@ impl Semaphore {
         }
     }
 
+    #[allow(unused)]
     /// down operation of semaphore
     pub fn down(&self) {
         trace!("kernel: Semaphore::down");
